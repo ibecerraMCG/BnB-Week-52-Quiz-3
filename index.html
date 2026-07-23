@@ -960,7 +960,7 @@
                 <span id="typo-scale-val">100%</span>
                 <button class="typo-step lg" onclick="bbStepTextScale(5)" aria-label="Larger text" title="Larger">A+</button>
             </div>
-            <input type="range" id="typo-scale-range" min="80" max="160" step="5" value="100"
+            <input type="range" id="typo-scale-range" min="60" max="200" step="5" value="100"
                    oninput="bbSetTextScale(this.value)" aria-label="Text size percentage">
         </div>
 
@@ -2518,8 +2518,7 @@ function bbSetLayout(v) { try { localStorage.setItem('bb_layout', v); } catch (e
    TEXT SIZE & FONT  (shared across every B&B page)
    Pinch-zooming a laptop trackpad scales the viewport, which pushes the
    fixed header and sticky sidebar off-screen. Scaling the root font size
-   instead grows the text while the header/sidebar geometry stays in
-   proportion, so the chrome stays where it belongs.
+   instead grows the text while the page furniture stays in proportion.
    Written into a dedicated <style> element rather than an inline style on
    <html>, because changeTheme() clears the root element's inline styles.
 ============================================================ */
@@ -2531,11 +2530,46 @@ const BB_FONTS = [
     { id: 'mono',     name: 'Monospace', stack: "'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace" },
     { id: 'easyread', name: 'Easy read', stack: "'Comic Sans MS', 'Trebuchet MS', Verdana, sans-serif" }
 ];
-const BB_SCALE_MIN = 80, BB_SCALE_MAX = 160, BB_HEADER_BASE = 56;
+const BB_SCALE_MIN = 60, BB_SCALE_MAX = 200, BB_HEADER_BASE = 56;
+/* The toolbar is chrome, not content: every extra pixel of it is a pixel of the
+   page you cannot see. It follows the setting at 75% of the rate, and its height
+   never drops below the design default (the buttons in it are a fixed 38px). */
+const BB_HEADER_DAMP = 0.75;
+const BB_CONTENT_MAX = 860, BB_CONTENT_PAD = 48;
+const BB_CARD_SEL = '.question-card', BB_CARD_PAD_V = 22.4, BB_CARD_PAD_H = 24;
+const BB_HEADER_TEXT = [
+    ['.brand-title', 1.02], ['.brand-sub', 0.66], ['.mode-switch button', 0.78],
+    ['.icon-btn', 0.9], ['.icon-btn .btn-label', 0.78], ['#theme-select', 0.82]
+];
 
 let bbTextScale = parseInt(localStorage.getItem('bb_textScale'), 10);
 if (!(bbTextScale >= BB_SCALE_MIN && bbTextScale <= BB_SCALE_MAX)) bbTextScale = 100;
 let bbFontId = localStorage.getItem('bb_fontFamily') || 'default';
+
+/* Layout that has to react to the text size. Nothing is emitted at 100%, so the
+   stylesheet is left exactly as authored unless the reader opts in. */
+function bbLayoutRules() {
+    if (bbTextScale === 100) return '';
+    const s = bbTextScale / 100;
+    const d = 1 + (s - 1) * BB_HEADER_DAMP;
+    let out = ':root{--header-h:' + Math.max(BB_HEADER_BASE, Math.round(BB_HEADER_BASE * d)) + 'px;}';
+    out += BB_HEADER_TEXT.map(function (r) {
+        return '#main-header ' + r[0] + '{font-size:' + (r[1] * 16 * d).toFixed(2) + 'px;}';
+    }).join('');
+    /* Above 100%, widen the reading column with the text and tighten the frame
+       around it, so a larger size means larger text rather than fewer words per
+       line. Floors keep the padding from ever collapsing onto the content.
+       The sidebar is deliberately left alone - it is drag-resizable. */
+    if (bbTextScale > 100) {
+        const shrink = Math.max(0.55, 1 - (s - 1) * 0.75);
+        const side = Math.max(14, Math.round(BB_CONTENT_PAD * shrink));
+        out += '#main-content{max-width:' + Math.round(BB_CONTENT_MAX * s) + 'px;' +
+                   'padding-left:' + side + 'px;padding-right:' + side + 'px;}' +
+               BB_CARD_SEL + '{padding:' + Math.max(12, Math.round(BB_CARD_PAD_V * shrink)) + 'px ' +
+                                            Math.max(14, Math.round(BB_CARD_PAD_H * shrink)) + 'px;}';
+    }
+    return out;
+}
 
 function bbApplyTypography() {
     const font = BB_FONTS.find(f => f.id === bbFontId) || BB_FONTS[0];
@@ -2547,7 +2581,7 @@ function bbApplyTypography() {
             ':root{--font-main:' + font.stack + ';}' +
             '@media (min-width:821px){' +
                 'html{font-size:' + bbTextScale + '%;}' +
-                ':root{--header-h:' + Math.round(BB_HEADER_BASE * bbTextScale / 100) + 'px;}' +
+                bbLayoutRules() +
             '}';
     }
     const val = document.getElementById('typo-scale-val');
