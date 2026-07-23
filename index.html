@@ -820,8 +820,62 @@
     .reset-btn { color: #f87171; border-color: rgba(248,113,113,0.5); }
     .reset-btn:hover { background: #f87171; color: #fff; border-color: #f87171; }
     .reset-armed, .reset-armed:hover { background: #f87171 !important; color: #fff !important; border-color: #f87171 !important; }
+
+    /* ============================================================
+       TEXT SIZE & FONT  (desktop only)
+       A non-modal popover: the page stays fully visible behind it so
+       every change previews live.
+    ============================================================ */
+    @keyframes bb-typo-pop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    #typo-panel {
+        position: absolute; top: calc(var(--header-h) + 8px); right: clamp(0.8rem, 2.5vw, 1.4rem);
+        /* rem, not px, so the panel grows with the setting it controls and its
+           own labels never wrap awkwardly at large text sizes */
+        width: 17.4rem; max-width: calc(100vw - 1.6rem);
+        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
+        padding: 14px 16px; z-index: 300; box-shadow: 0 16px 44px rgba(0,0,0,0.4);
+        animation: bb-typo-pop 0.2s ease; display: none;
+    }
+    #typo-panel.open { display: block; }
+    .typo-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .typo-head-title { font-size: 0.9rem; font-weight: 700; color: var(--text-main); }
+    .typo-reset {
+        background: none; border: 1px solid var(--border-color); color: var(--text-muted);
+        border-radius: 8px; padding: 4px 10px; font-size: 0.72rem; font-weight: 600;
+        font-family: var(--font-main); cursor: pointer; transition: color 0.2s, border-color 0.2s;
+    }
+    .typo-reset:hover { color: var(--text-accent); border-color: var(--text-accent); }
+    .typo-group + .typo-group { margin-top: 13px; padding-top: 13px; border-top: 1px solid var(--border-subtle); }
+    .typo-label {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+        color: var(--text-muted); margin-bottom: 9px;
+    }
+    .typo-size { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .typo-step {
+        width: 36px; height: 31px; flex-shrink: 0; border-radius: 8px; border: 1px solid var(--border-color);
+        background: none; color: var(--text-main); cursor: pointer; font-family: var(--font-main); font-weight: 700;
+        display: inline-flex; align-items: center; justify-content: center;
+        transition: background 0.2s, border-color 0.2s;
+    }
+    .typo-step:hover { background: var(--bg-hover); border-color: var(--text-accent); }
+    .typo-step.sm { font-size: 0.74rem; }
+    .typo-step.lg { font-size: 1.02rem; }
+    #typo-scale-val { font-size: 0.86rem; font-weight: 700; color: var(--text-accent); min-width: 54px; text-align: center; }
+    #typo-scale-range { width: 100%; margin-top: 10px; accent-color: var(--text-accent); cursor: pointer; }
+    .typo-fonts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .typo-font {
+        padding: 8px 9px; border-radius: 8px; border: 1px solid var(--border-color); background: none;
+        color: var(--text-main); cursor: pointer; font-size: 0.8rem; text-align: left;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .typo-font:hover { background: var(--bg-hover); }
+    .typo-font.on { background: var(--bg-active); border-color: var(--text-accent); color: var(--text-accent); }
+    /* Desktop-only control: phones already have the browser's own text zoom. */
+    @media (max-width: 820px) { #typo-btn, #typo-panel { display: none !important; } }
 </style>
 <style>html.bb-classic #app, html.bb-classic #neural-bg, html.bb-classic #wash { display: none !important; }</style>
+<style id="bb-typo-style"></style>
 </head>
 
 <body>
@@ -882,6 +936,7 @@
             <option value="contrast">High Contrast</option>
             <option value="custom">⚙️ Custom…</option>
         </select>
+        <button id="typo-btn" class="icon-btn" onclick="bbToggleTypo()" title="Text size &amp; font" aria-label="Text size and font" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19l5.5-14L14 19"/><path d="M5.2 14h6.6"/><path d="M15.5 19l3.2-8 3.3 8"/><path d="M16.7 16.4h4"/></svg></button>
         <button id="settings-btn" class="icon-btn" onclick="toggleSettings()" title="Settings" aria-label="Settings">⚙️</button>
     </div>
 
@@ -890,6 +945,29 @@
         <div class="cpg"><label>Cards</label><input type="color" id="color-card" value="#334155" oninput="updateCustomTheme()"></div>
         <div class="cpg"><label>Text</label><input type="color" id="color-text" value="#f1f5f9" oninput="updateCustomTheme()"></div>
         <div class="cpg"><label>Accent</label><input type="color" id="color-accent" value="#38bdf8" oninput="updateCustomTheme()"></div>
+    </div>
+
+    <div id="typo-panel" role="dialog" aria-label="Text size and font">
+        <div class="typo-head">
+            <span class="typo-head-title">Text size &amp; font</span>
+            <button class="typo-reset" onclick="bbResetTypography()">Reset</button>
+        </div>
+
+        <div class="typo-group">
+            <div class="typo-label">Text size</div>
+            <div class="typo-size">
+                <button class="typo-step sm" onclick="bbStepTextScale(-5)" aria-label="Smaller text" title="Smaller">A&minus;</button>
+                <span id="typo-scale-val">100%</span>
+                <button class="typo-step lg" onclick="bbStepTextScale(5)" aria-label="Larger text" title="Larger">A+</button>
+            </div>
+            <input type="range" id="typo-scale-range" min="80" max="160" step="5" value="100"
+                   oninput="bbSetTextScale(this.value)" aria-label="Text size percentage">
+        </div>
+
+        <div class="typo-group">
+            <div class="typo-label">Font</div>
+            <div class="typo-fonts" id="typo-fonts"></div>
+        </div>
     </div>
 
     <div id="settings-panel">
@@ -1061,6 +1139,11 @@
                 <p class="help-tip"><b>Tutor</b> grades each question the moment you submit it and shows the explanation. <b>Exam</b> hides feedback until you press <b>Submit &amp; grade quiz</b> at the end.</p>
                 <p class="help-tip">Turn on <b>Grade</b> (Tutor only) for a live running score, and use <b>LOs</b> to reveal learning objectives. (See the <b>Question navigator</b> section above for jumping between questions and resetting.)</p>
                 <p class="help-tip">Turn on <b>Auto-submit answers</b> (top of the page, Tutor mode) to reveal feedback the instant you pick a choice — no need to press Submit each time.</p>
+            </div>
+            <div class="help-section">
+                <h3>Text size &amp; font</h3>
+                <p class="help-tip">The <b>Aa button</b> in the header opens the text options. Use <b>Text size</b> to make everything on the page larger or smaller, and <b>Font</b> to switch to a different typeface.</p>
+                <p class="help-tip"><b>Reset</b> puts both back to the defaults.</p>
             </div>
         </div>
     </div>
@@ -2428,6 +2511,113 @@ function bbSetLayout(v) { try { localStorage.setItem('bb_layout', v); } catch (e
     updateTutorTracker();
     refreshResults();
 })();
+</script>
+
+<script>
+/* ============================================================
+   TEXT SIZE & FONT  (shared across every B&B page)
+   Pinch-zooming a laptop trackpad scales the viewport, which pushes the
+   fixed header and sticky sidebar off-screen. Scaling the root font size
+   instead grows the text while the header/sidebar geometry stays in
+   proportion, so the chrome stays where it belongs.
+   Written into a dedicated <style> element rather than an inline style on
+   <html>, because changeTheme() clears the root element's inline styles.
+============================================================ */
+const BB_FONTS = [
+    { id: 'default',  name: 'Default',   stack: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+    { id: 'system',   name: 'System',    stack: "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+    { id: 'serif',    name: 'Serif',     stack: "Georgia, 'Times New Roman', Times, serif" },
+    { id: 'verdana',  name: 'Verdana',   stack: "Verdana, Tahoma, Geneva, sans-serif" },
+    { id: 'mono',     name: 'Monospace', stack: "'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace" },
+    { id: 'easyread', name: 'Easy read', stack: "'Comic Sans MS', 'Trebuchet MS', Verdana, sans-serif" }
+];
+const BB_SCALE_MIN = 80, BB_SCALE_MAX = 160, BB_HEADER_BASE = 56;
+
+let bbTextScale = parseInt(localStorage.getItem('bb_textScale'), 10);
+if (!(bbTextScale >= BB_SCALE_MIN && bbTextScale <= BB_SCALE_MAX)) bbTextScale = 100;
+let bbFontId = localStorage.getItem('bb_fontFamily') || 'default';
+
+function bbApplyTypography() {
+    const font = BB_FONTS.find(f => f.id === bbFontId) || BB_FONTS[0];
+    const el = document.getElementById('bb-typo-style');
+    if (el) {
+        // The size half is desktop-only (the button is hidden on phones, so a
+        // scale set on a laptop must never leave a phone stuck with huge text).
+        el.textContent =
+            ':root{--font-main:' + font.stack + ';}' +
+            '@media (min-width:821px){' +
+                'html{font-size:' + bbTextScale + '%;}' +
+                ':root{--header-h:' + Math.round(BB_HEADER_BASE * bbTextScale / 100) + 'px;}' +
+            '}';
+    }
+    const val = document.getElementById('typo-scale-val');
+    if (val) val.textContent = bbTextScale + '%';
+    const range = document.getElementById('typo-scale-range');
+    if (range && Number(range.value) !== bbTextScale) range.value = bbTextScale;
+    document.querySelectorAll('.typo-font').forEach(b => b.classList.toggle('on', b.dataset.font === bbFontId));
+}
+function bbSetTextScale(v) {
+    const n = Math.round(Number(v) / 5) * 5;
+    bbTextScale = Math.max(BB_SCALE_MIN, Math.min(BB_SCALE_MAX, n || 100));
+    localStorage.setItem('bb_textScale', String(bbTextScale));
+    bbApplyTypography();
+}
+function bbStepTextScale(d) { bbSetTextScale(bbTextScale + d); }
+function bbSetFont(id) {
+    bbFontId = id;
+    localStorage.setItem('bb_fontFamily', id);
+    bbApplyTypography();
+}
+function bbResetTypography() { bbSetTextScale(100); bbSetFont('default'); }
+
+function bbBuildFontChips() {
+    const wrap = document.getElementById('typo-fonts');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    BB_FONTS.forEach(f => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'typo-font';
+        b.dataset.font = f.id;
+        b.textContent = f.name;
+        b.style.fontFamily = f.stack;   // each chip previews its own face
+        b.title = f.name;
+        b.onclick = () => bbSetFont(f.id);
+        wrap.appendChild(b);
+    });
+}
+function bbCloseTypo() {
+    const p = document.getElementById('typo-panel'), b = document.getElementById('typo-btn');
+    if (p) p.classList.remove('open');
+    if (b) { b.classList.remove('on', 'open'); b.setAttribute('aria-expanded', 'false'); }
+}
+function bbToggleTypo() {
+    const p = document.getElementById('typo-panel'), b = document.getElementById('typo-btn');
+    if (!p) return;
+    const open = !p.classList.contains('open');
+    p.classList.toggle('open', open);
+    if (b) { b.classList.toggle('on', open); b.classList.toggle('open', open); b.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+    if (open) {
+        // don't stack with the other header popovers
+        const sp = document.getElementById('settings-panel'), sb = document.getElementById('settings-btn');
+        if (sp) sp.classList.remove('open');
+        if (sb) sb.classList.remove('open');
+        const cb = document.getElementById('custom-builder');
+        if (cb) cb.classList.remove('active');
+    }
+}
+document.addEventListener('click', e => {
+    const p = document.getElementById('typo-panel'), b = document.getElementById('typo-btn');
+    if (p && p.classList.contains('open') && !p.contains(e.target) && b && !b.contains(e.target)) bbCloseTypo();
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const p = document.getElementById('typo-panel');
+        if (p && p.classList.contains('open')) bbCloseTypo();
+    }
+});
+bbBuildFontChips();
+bbApplyTypography();
 </script>
 
 <script type="text/html" id="bb-classic-doc">
